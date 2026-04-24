@@ -1,6 +1,6 @@
 ---
 name: intranet_browser_10_25
-description: OpenClaw browser skill for http://10.25.145.37:10003/ — login with graphical CAPTCHA, xr-menu sidebar, span.tab-name tabs, forms. Triggers 小龙虾, OpenClaw, intranet 10003, 内网自动化. Playwright Python auto.py：交互登录、ddddocr 画布验证码、英文逗号多级菜单、页签子串匹配。
+description: OpenClaw browser skill for http://10.25.145.37:10003/ — login with graphical CAPTCHA, xr-menu sidebar, span.tab-name tabs, forms. Triggers 小龙虾, OpenClaw, intranet 10003, 内网自动化. Playwright Python auto.py：交互登录、ddddocr 画布验证码、输入画面名称（侧栏单次点击）；不含页签自动化。
 metadata: {"openclaw":{"emoji":"🦞","homepage":"https://docs.openclaw.ai/tools/browser"}}
 ---
 
@@ -31,25 +31,26 @@ metadata: {"openclaw":{"emoji":"🦞","homepage":"https://docs.openclaw.ai/tools
 | 登录 | `get_by_role("button", name="登录")` |
 
 - **验证码 canvas**：`page.locator("canvas")`；优先选 **可见** 且 **面积最大**（宽×高 ≥ 约 1500）的一块截图 OCR；若无满足阈值的，则对第一个可见 canvas 截图。
-- **登录后等待**：`wait_for_load_state("networkidle")`；侧栏 `div.xr-menu[role="menu"]` 最长等待约 60s，超时则跳过菜单/页签步骤并提示。
+- **登录后等待**：`wait_for_load_state("networkidle")`；侧栏 `div.xr-menu[role="menu"]` 最长等待约 60s，超时则跳过菜单步骤并提示。
 
 ## 登录后：左侧导航（`xr-menu` / `auto.py` 实现）
 
 - **形态**：深蓝底竖向侧栏；DOM 为 `div.xr-menu[role="menu"]`，项为 `li.xr-sub-menu` / `div.xr-sub-menu-content__title span` 等（与 Element / 自研组件一致）。
-- **多级路径（`auto.py`）**：用户在一步输入中用 **英文逗号** `,` 分隔每一级要点的 **菜单文案**（与界面 **完全一致** 的精确匹配）。脚本按顺序对每一级调用 `_click_sidebar_label`：
+- **画面名称（`auto.py`）**：交互提示为 **「输入画面名称」**。用户输入 **一项** 与侧栏 **完全一致** 的文案（精确匹配），脚本调用一次 `_click_sidebar_label`：
   1. 在 `div.xr-menu[role="menu"]` 内遍历 `div.xr-sub-menu-content__title span`，`inner_text().strip() == label` 则点击其祖先 `div.xr-sub-menu-content`；
   2. 若无匹配，则在侧栏滚动区 `.xl-scrollbar.xr-menu-scrollbar` 内 `get_by_text(label, exact=True)` 点击第一项。
-- **每级间隔**：约 0.35s，避免动画未完成。
-- **OpenClaw**：仍建议每步后 `snapshot`，用 **ref** 点与界面完全一致的文案（含简繁、空格、末尾字符如 `X`）；口述路径可与 `auto.py` 的逗号路径一一对应。
+- **留空**：登录后不点侧栏。
+- **点击后间隔**：约 0.35s，避免动画未完成。
+- **OpenClaw**：建议每步后 `snapshot`，用 **ref** 点与界面完全一致的文案（含简繁、空格、末尾字符如 `X`）。`auto.py` 仅支持 **单次** 侧栏点击；若需先展开多级父菜单，用 OpenClaw 分步 `act`，或展开后再运行脚本并输入目标叶子名称。
 
 **可见的一级菜单名称**（自上而下，便于用户口述路径）：成本管理、应用集成平台、系统开发管理、工厂建模、工厂监控、采购管理、销售管理、出厂管理、财务管理、铁区管理、资源管理、质量管理、质量先期策划、智慧质量、生产合同管理、作业计划管理、物料管理。完整子菜单名以实际展开为准，见 [reference.md](reference.md)。
 
-**嵌套示例（仓库 MMS）**：一级 **「仓库管理(MMS)X」** → 二级 **「仓库图形化」** → 叶子 **「仓库图形化显示_板坯」**。在 `auto.py` 中合并为一行：`仓库管理(MMS)X,仓库图形化,仓库图形化显示_板坯`。
+**示例**：输入与当前侧栏可见项一致的 **「仓库图形化显示_板坯」**（须与界面显示逐字一致，含括号、后缀 `X` 等）。
 
 ## 登录后：页签（`span.tab-name`）
 
 - **场景**：进入某菜单后，主区顶部常有多个 **页签**；完整标题可能带方括号代码，例如 `冷轧热卷入库管理[WMCRHRX11P1]`。
-- **`auto.py` 行为**：用户输入 **子串**（如 `冷轧热卷入库管理`），脚本在 `span.tab-name` 中查找第一个 `inner_text` **包含** 该子串的节点，滚动可见后点击；找不到则报错。
+- **`auto.py`**：不处理页签；需在浏览器内手动切换，或改用 OpenClaw / 自写步骤。
 - **OpenClaw**：`snapshot` 后对用户给出的关键词找对应 tab 的 ref 再 `act`；注意子串不必等于全称。
 
 ## 业务页示例：查询条件 + 明细表（仓库图形化类页面）
@@ -77,7 +78,7 @@ metadata: {"openclaw":{"emoji":"🦞","homepage":"https://docs.openclaw.ai/tools
 
 说明见 [reference.md](reference.md)。
 
-### Python：`auto.py`（与上表选择器 / 菜单 / 页签一致）
+### Python：`auto.py`（与上表选择器 / 登录后侧栏一致）
 
 - **路径**：通常与工作区根目录 `auto.py` 一致；若技能单独克隆，请将同逻辑脚本放在可执行路径或从仓库复制。
 - **环境**：
@@ -92,9 +93,8 @@ playwright install chromium
 - **交互输入**：
   1. **访问网址**（可不带协议，脚本会补 `http://`）；
   2. **账号** / **密码**（密码用 `getpass`，不回显）；
-  3. **菜单路径**：多级用 **英文逗号** 分隔；留空则登录后不点菜单；
-  4. **页签关键词**：`span.tab-name` 子串；留空则跳过。
-- **运行**： headed Chromium，`ignore_https_errors=True`，默认各类超时约 60s（页签查找 30s）。
+  3. **画面名称**：侧栏一项，与菜单文案完全一致；留空则登录后不点侧栏。
+- **运行**： headed Chromium，`ignore_https_errors=True`，默认各类超时约 60s。
 - **失败**：异常时全页截图 **`auto_login_error.png`**（勿提交 git）；结束前会提示「按回车关闭浏览器」。
 - **Windows 控制台**：脚本尝试将 stdout/stderr 设为 UTF-8，减少中文乱码。
 
@@ -105,7 +105,7 @@ playwright install chromium
 
 ## Agent 约定
 
-- **有 OpenClaw**：用 snapshot 的 ref 完成登录、点菜单、填表；对齐用户口述的菜单名与字段名；菜单多级顺序与 `auto.py` 的逗号路径一致。
+- **有 OpenClaw**：用 snapshot 的 ref 完成登录、点菜单、填表；对齐用户给出的 **画面名称**、菜单名与字段名；多层级侧栏以 `snapshot` 分步点击（`auto.py` 仅单次侧栏点击）。
 - **无 OpenClaw**：在可达内网环境执行 `automation-template.mjs`，或执行 **`auto.py`**（需要图形验证码时优先 headed + ddddocr 或手输）。
 
 ## 延伸阅读

@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-交互式登录 + 侧栏菜单 + 页签：
+交互式登录 + 侧栏菜单：
   1) 输入网址、账号、密码；canvas 验证码可 ddddocr 或手输
-  2) 登录成功后，可按「英文逗号」分隔的多级菜单名依次点击（适配 xr-menu / xr-sub-menu）
-  3) 可选：按 span.tab-name 子串匹配点击页签（如输入 冷轧热卷入库管理 可匹配 冷轧热卷入库管理[WMCRHRX11P1]）
+  2) 登录成功后，可输入画面名称（侧栏一项，适配 xr-menu / xr-sub-menu）
 
 准备环境:
   pip install -r requirements-auto.txt
@@ -107,32 +106,6 @@ def _click_sidebar_label(page, label: str) -> None:
     time.sleep(0.35)
 
 
-def _click_tab_by_substring(page, tab_query: str) -> None:
-    """点击第一个 span.tab-name，其文案包含 tab_query（子串匹配，不要求与页签全文一致）。"""
-    tab_query = tab_query.strip()
-    if not tab_query:
-        return
-
-    tabs = page.locator("span.tab-name")
-    if tabs.count() == 0:
-        time.sleep(1.0)
-    if tabs.count() == 0:
-        raise RuntimeError("未找到 span.tab-name，请先通过菜单进入含页签的画面。")
-    tabs.first.wait_for(state="visible", timeout=30_000)
-    for i in range(tabs.count()):
-        el = tabs.nth(i)
-        try:
-            text = el.inner_text().strip()
-            if tab_query in text:
-                print("  将点击页签:", text)
-                el.scroll_into_view_if_needed()
-                el.click(timeout=15_000)
-                return
-        except Exception:
-            continue
-    raise RuntimeError(f"未找到包含 {tab_query!r} 的页签（span.tab-name）")
-
-
 def main() -> None:
     _ensure_utf8_stdio()
 
@@ -146,12 +119,7 @@ def main() -> None:
     username = input("账号: ").strip()
     password = getpass.getpass("密码: ")
 
-    menu_path = input(
-        "登录后要点的菜单路径（多级用英文逗号分隔，如 仓库管理(MMS)X,仓库图形化,仓库图形化显示_板坯；留空跳过）: ",
-    ).strip()
-    tab_name = input(
-        "要打开的页签关键词（span.tab-name 子串即可，如 冷轧热卷入库管理 可匹配带 [代码] 的全称；留空跳过）: ",
-    ).strip()
+    screen_name = input("输入画面名称: ").strip()
 
     try:
         from playwright.sync_api import sync_playwright
@@ -196,17 +164,11 @@ def main() -> None:
                     timeout=60_000,
                 )
             except Exception:
-                print("未在 60s 内检测到侧栏菜单，跳过菜单/页签步骤。")
+                print("未在 60s 内检测到侧栏菜单，跳过菜单步骤。")
             else:
-                if menu_path:
-                    for part in menu_path.split(","):
-                        lab = part.strip()
-                        if lab:
-                            print("点击菜单:", lab)
-                            _click_sidebar_label(page, lab)
-                if tab_name:
-                    print("点击页签:", tab_name)
-                    _click_tab_by_substring(page, tab_name)
+                if screen_name:
+                    print("点击画面:", screen_name)
+                    _click_sidebar_label(page, screen_name)
 
             print("流程结束（请确认浏览器画面）。")
         except Exception as exc:  # noqa: BLE001
